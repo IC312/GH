@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔒 Dành riêng cho Tủn</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; overflow:hidden; font-family:'Segoe UI', Arial, sans-serif; background:#1a0b14; }
+  canvas#bg { position:fixed; inset:0; z-index:1; }
+
+  .scene { position:fixed; inset:0; z-index:2; display:flex; flex-direction:column;
+           align-items:center; justify-content:center; text-align:center; padding:20px; }
+
+  .title { position:relative; }
+  h1.name {
+    font-size:clamp(3rem, 13vw, 8rem);
+    font-weight:900; letter-spacing:.06em;
+    background:linear-gradient(90deg,#ff7ab8,#ffd6e8,#ff4f93,#ffb3d1,#ff7ab8);
+    background-size:300% 100%;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:shimmer 4s linear infinite, floaty 3.5s ease-in-out infinite;
+    filter:drop-shadow(0 0 25px rgba(255,79,147,.55));
+  }
+  @keyframes shimmer { to { background-position:300% 0; } }
+  @keyframes floaty { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+
+  .badge {
+    display:inline-block; margin-bottom:14px; padding:8px 22px; border-radius:999px;
+    border:1px solid rgba(255,182,213,.5); color:#ffd6e8; font-size:clamp(.8rem,2.5vw,1rem);
+    letter-spacing:.35em; text-transform:uppercase;
+    background:rgba(255,122,184,.08); backdrop-filter:blur(6px);
+    animation:glowpulse 2.5s ease-in-out infinite;
+  }
+  @keyframes glowpulse { 0%,100%{box-shadow:0 0 8px rgba(255,122,184,.25)} 50%{box-shadow:0 0 28px rgba(255,122,184,.65)} }
+
+  .sub {
+    margin-top:16px; opacity:0; animation:fadeup 1.2s ease .8s forwards;
+    font-size:clamp(1.15rem,4.2vw,1.9rem); font-weight:900; letter-spacing:.06em;
+    color:#ffe3f0;
+    text-shadow:0 0 12px rgba(255,122,184,.9), 0 0 34px rgba(255,79,147,.55), 0 2px 0 rgba(120,10,60,.6);
+    animation:fadeup 1.2s ease .8s forwards, subglow 2.2s ease-in-out 2s infinite;
+    padding:10px 24px; border-radius:999px;
+    background:rgba(255,122,184,.1); border:1px solid rgba(255,182,213,.45);
+    backdrop-filter:blur(6px);
+  }
+  @keyframes subglow {
+    0%,100% { box-shadow:0 0 10px rgba(255,122,184,.25); }
+    50% { box-shadow:0 0 34px rgba(255,122,184,.7); }
+  }
+  @keyframes fadeup { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ---------- LETTER CARD ---------- */
+  .card {
+    margin-top:34px; position:relative; cursor:pointer; width:min(88vw,420px); height:230px;
+    perspective:1200px; opacity:0; animation:fadeup 1.2s ease 1.6s forwards;
+  }
+  .card-inner { position:absolute; inset:0; transition:transform .9s cubic-bezier(.4,1.4,.4,1); transform-style:preserve-3d; }
+  .card.flipped .card-inner { transform:rotateY(180deg); }
+  .face {
+    position:absolute; inset:0; border-radius:20px; backface-visibility:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+    padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .front { background:linear-gradient(135deg,#ff5f9e,#c2316e); color:#fff; }
+  .front .heart-big { font-size:4rem; animation:beat 1.1s ease-in-out infinite; }
+  @keyframes beat { 0%,100%{transform:scale(1)} 25%{transform:scale(1.18)} 40%{transform:scale(1)} 60%{transform:scale(1.12)} }
+  .front p { letter-spacing:.2em; text-transform:uppercase; font-size:.9rem; }
+  .hint { font-size:.75rem; opacity:.85; }
+  .back { background:linear-gradient(135deg,#fff0f6,#ffd6e8); transform:rotateY(180deg); color:#7a1543; }
+  .back p { font-size:clamp(.95rem,2.8vw,1.1rem); line-height:1.65; font-weight:600; }
+  .type { min-height:120px; }
+  .caret { display:inline-block; width:2px; height:1em; background:#7a1543; vertical-align:-2px;
+           animation:blink .7s step-end infinite; }
+  @keyframes blink { 50%{opacity:0} }
+
+  /* ---------- BUTTONS ---------- */
+  .btns { margin-top:26px; display:flex; gap:14px; flex-wrap:wrap; justify-content:center; opacity:0;
+          animation:fadeup 1.2s ease 2.4s forwards; }
+  .btn {
+    cursor:pointer; border:none; border-radius:999px; padding:12px 28px; font-size:.95rem; font-weight:700;
+    color:#fff; background:linear-gradient(135deg,#ff5f9e,#a82158);
+    box-shadow:0 8px 24px rgba(255,79,147,.4); transition:transform .2s, box-shadow .2s;
+  }
+  .btn:hover { transform:translateY(-3px) scale(1.05); box-shadow:0 12px 32px rgba(255,79,147,.65); }
+  .btn.ghost { background:rgba(255,255,255,.08); border:1px solid rgba(255,182,213,.45); backdrop-filter:blur(6px); }
+
+  .tips { margin-top:16px; color:rgba(255,214,232,.7); font-size:.8rem; opacity:0; animation:fadeup 1s ease 3s forwards; }
+
+  .burst-heart { position:fixed; z-index:5; pointer-events:none; font-size:20px;
+                 animation:fly 1.6s ease-out forwards; }
+  @keyframes fly { to{ transform:translate(var(--dx),var(--dy)) scale(1.6); opacity:0; } }
+
+  /* ---------- LOCK SCREEN ---------- */
+  #lock {
+    position:fixed; inset:0; z-index:100; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px; padding:24px;
+    background:radial-gradient(circle at 50% 30%, #3a1230, #140610 70%);
+    transition:opacity .8s ease, visibility .8s;
+  }
+  #lock.open { opacity:0; visibility:hidden; }
+  .lock-ico { font-size:4.5rem; animation:floaty 3s ease-in-out infinite; }
+  .lock-title { color:#ffd6e8; font-size:clamp(1.3rem,5vw,2rem); font-weight:900; letter-spacing:.1em; }
+  .lock-sub { color:rgba(255,214,232,.7); font-size:.95rem; margin-top:-8px; }
+  .lock-box {
+    display:flex; gap:12px; align-items:center; background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,182,213,.4); border-radius:18px; padding:14px 16px;
+    backdrop-filter:blur(8px); box-shadow:0 10px 40px rgba(0,0,0,.4);
+  }
+  .lock-box.shake { animation:shake .45s; border-color:#ff4f6d; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)}
+                     60%{transform:translateX(-8px)} 80%{transform:translateX(8px)} }
+  #pwd {
+    background:transparent; border:none; outline:none; color:#fff; font-size:1.4rem;
+    letter-spacing:.4em; width:min(60vw,230px); text-align:center; font-weight:700;
+  }
+  #pwd::placeholder { color:rgba(255,214,232,.4); letter-spacing:.1em; font-size:1rem; }
+  #unlockBtn {
+    cursor:pointer; border:none; border-radius:12px; padding:10px 20px; font-weight:800;
+    background:linear-gradient(135deg,#ff5f9e,#a82158); color:#fff; font-size:1rem;
+    transition:transform .2s;
+  }
+  #unlockBtn:hover { transform:scale(1.08); }
+  .lock-hint {
+    color:rgba(255,220,150,.85); font-size:.85rem; letter-spacing:.08em;
+    background:rgba(255,196,0,.08); border:1px dashed rgba(255,220,150,.4);
+    padding:8px 18px; border-radius:999px;
+  }
+  .lock-error { color:#ff8fa3; font-size:.85rem; min-height:1.2em; font-weight:600; }
+  .confetti { position:fixed; top:-12px; z-index:60; pointer-events:none; border-radius:2px;
+    animation:confall linear forwards; }
+  @keyframes confall { to { transform:translateY(105vh) rotate(720deg); opacity:.6; } }
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<!-- ===== LOCK SCREEN ===== -->
+<div id="lock">
+  <div class="lock-ico">🔐</div>
+  <div class="lock-title">Trang này chỉ dành cho Tủn</div>
+  <div class="lock-sub">Nhập mật khẩu để vào nhé bạn 💕</div>
+  <div class="lock-box" id="lockBox">
+    <input id="pwd" type="password" inputmode="numeric" placeholder="ddmmyyyy" maxlength="10" autocomplete="off">
+    <button id="unlockBtn">Mở 💖</button>
+  </div>
+  <div class="lock-hint">💡 Gợi ý: ngày sinh của bạn (ví dụ 01012000)</div>
+  <div class="lock-error" id="lockErr"></div>
+</div>
+
+<div class="scene">
+  <div class="badge">✨ 20 · Tháng 10 ✨</div>
+  <div class="title"><h1 class="name">Tủn</h1></div>
+  <p class="sub">✨ Gia Hân à, chúc mừng ngày Phụ nữ Việt Nam ✨</p>
+
+  <div class="card" id="card">
+    <div class="card-inner">
+      <div class="face front">
+        <div class="heart-big">💌</div>
+        <p>Có một lá thư cho bạn</p>
+        <span class="hint">(chạm để mở)</span>
+      </div>
+      <div class="face back">
+        <p class="type"><span id="typeTxt"></span><span class="caret"></span></p>
+        <p style="font-size:.85rem;opacity:.75">— Minh Quân 💘</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="tips">Chạm vào bất cứ đâu để tỏa tim 💕</p>
+</div>
+
+<script>
+const cv = document.getElementById('bg'), ctx = cv.getContext('2d');
+let W,H; const fit=()=>{W=cv.width=innerWidth;H=cv.height=innerHeight}; fit(); addEventListener('resize',fit);
+
+const petals=[], fireworks=[];
+const PINKS=['#ff7ab8','#ffb3d1','#ff4f93','#ffd6e8','#ff9ec7'];
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+function spawnPetal(){ petals.push({x:rnd(0,W),y:-20,vy:rnd(.6,1.8),vx:rnd(-.5,.5),
+  s:rnd(6,14),a:rnd(0,Math.PI*2),va:rnd(-.03,.03),c:PINKS[Math.floor(rnd(0,5))],sw:rnd(0,Math.PI*2)}); }
+
+function drawPetal(p){
+  ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a);
+  ctx.fillStyle=p.c; ctx.globalAlpha=.85;
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.bezierCurveTo(p.s,-p.s,p.s*2,-p.s*.2,0,p.s*1.6);
+  ctx.bezierCurveTo(-p.s*2,-p.s*.2,-p.s,0,0,0);
+  ctx.fill(); ctx.restore();
+}
+
+function spawnFirework(x,y){
+  const c=PINKS[Math.floor(rnd(0,5))];
+  for(let i=0;i<60;i++){ const ang=(Math.PI*2*i)/60, sp=rnd(2,5.5);
+    fireworks.push({x,y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,life:1,c}); }
+}
+
+function loop(){
+  ctx.clearRect(0,0,W,H);
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#2b0f22'); g.addColorStop(.6,'#1a0b14'); g.addColorStop(1,'#3a0f28');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle='rgba(255,255,255,.6)';
+  for(let i=0;i<40;i++){ const sx=(i*97)%W, sy=(i*61)%(H*.6);
+    ctx.globalAlpha=.3+.3*Math.sin(Date.now()/900+i); ctx.fillRect(sx,sy,1.6,1.6); }
+  ctx.globalAlpha=1;
+
+  if(Math.random()<.06) spawnPetal();
+  petals.forEach((p,i)=>{ p.sw+=.02; p.x+=p.vx+Math.sin(p.sw)*.7; p.y+=p.vy; p.a+=p.va;
+    drawPetal(p); if(p.y>H+30) petals.splice(i,1); });
+
+  for(let i=fireworks.length-1;i>=0;i--){ const f=fireworks[i];
+    f.x+=f.vx; f.y+=f.vy; f.vy+=.045; f.vx*=.985; f.vy*=.985; f.life-=.014;
+    if(f.life<=0){ fireworks.splice(i,1); continue; }
+    ctx.globalAlpha=f.life; ctx.fillStyle=f.c;
+    ctx.beginPath(); ctx.arc(f.x,f.y,2.4,0,Math.PI*2); ctx.fill(); }
+  ctx.globalAlpha=1;
+  requestAnimationFrame(loop);
+}
+loop();
+
+/* ---------- CLICK HEARTS ---------- */
+const EM=['💕','💖','💗','💝','🌸','❤️'];
+function heartsAt(x,y){
+  for(let i=0;i<8;i++){ const h=document.createElement('div');
+    h.className='burst-heart'; h.textContent=EM[Math.floor(Math.random()*EM.length)];
+    h.style.left=x+'px'; h.style.top=y+'px';
+    h.style.setProperty('--dx',rnd(-120,120)+'px');
+    h.style.setProperty('--dy',rnd(-160,-40)+'px');
+    document.body.appendChild(h); setTimeout(()=>h.remove(),1700); }
+}
+document.addEventListener('pointerdown',e=>{
+  if(!document.getElementById('lock').classList.contains('open')) return;
+  if(e.target.closest('#lock')) return;
+  heartsAt(e.clientX,e.clientY);
+  if(Math.random()<.7) spawnFirework(e.clientX,e.clientY);
+});
+
+setInterval(()=>{ if(Math.random()<.5 && document.getElementById('lock').classList.contains('open'))
+  spawnFirework(rnd(W*.15,W*.85),rnd(H*.1,H*.45)); },2600);
+
+/* ---------- LETTER ---------- */
+const letter = "Chúc Tủn 20/10 vui vẻ, xinh đẹp 💐. Chúc bạn thi HSG Vật lý trúng tủ và tự tin ôm giải Nhất về nha! 🏆 Cảm ơn bạn vì đã đến bên mình. Yêu Tủn nhiều lắm! ❤️";
+const card=document.getElementById('card'); let typing=false;
+card.addEventListener('click',()=>{
+  card.classList.toggle('flipped');
+  if(card.classList.contains('flipped') && !typing){
+    typing=true; const el=document.getElementById('typeTxt'); let i=0;
+    const tick=()=>{ if(i<=letter.length){ el.textContent=letter.slice(0,i++); setTimeout(tick,38);} };
+    setTimeout(tick,500);
+  }
+});
+
+/* ---------- LOCK / PASSWORD ---------- */
+const PASS='13052012';
+const lock=document.getElementById('lock'), box=document.getElementById('lockBox'),
+      pwd=document.getElementById('pwd'), err=document.getElementById('lockErr');
+let attempts=0;
+
+function confettiRain(){
+  const colors=[...PINKS,'#ffd54a','#ffb52e','#7ad9ff','#b28dff'];
+  for(let i=0;i<80;i++){ const c=document.createElement('div');
+    c.className='confetti';
+    c.style.left=rnd(0,100)+'vw';
+    c.style.width=rnd(6,12)+'px'; c.style.height=rnd(8,16)+'px';
+    c.style.background=colors[Math.floor(rnd(0,colors.length))];
+    c.style.animationDuration=rnd(2.2,4)+'s';
+    c.style.animationDelay=rnd(0,1)+'s';
+    document.body.appendChild(c); setTimeout(()=>c.remove(),6000); }
+}
+
+function tryUnlock(){
+  const val=pwd.value.replace(/\D/g,'');
+  if(val===PASS){
+    lock.classList.add('open');
+    confettiRain();
+    for(let i=0;i<6;i++) setTimeout(()=>spawnFirework(rnd(W*.2,W*.8),rnd(H*.15,H*.5)),i*250);
+    setTimeout(()=>heartsAt(W/2,H/2),300);
+  } else {
+    attempts++;
+    box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+    pwd.value='';
+    err.textContent = attempts>=3 ? 'Ơ kìa, ngày sinh của bạn mà quên à? 😤 Nhớ lại đi!' : 'Sai rồi, thử lại nha 💦';
+  }
+}
+document.getElementById('unlockBtn').onclick=tryUnlock;
+pwd.addEventListener('keydown',e=>{ if(e.key==='Enter') tryUnlock(); });
+pwd.focus();
+</script>
+</body>
+</html>
